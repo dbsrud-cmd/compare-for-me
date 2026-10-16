@@ -1,15 +1,15 @@
 import {imageError,CONDITIONS,validateInput} from './contract.mjs';
 import {el,renderResult} from './render.js';
 const $=id=>document.getElementById(id),rows=[];
-let busy=false,blockedUntil=0,lastCache=null,lastInput=null,activeTerm=null,resultLevel='완전 초보',generation=0;
+let busy=false,blockedUntil=0,lastCache=null,lastInput=null,activeTerm=null,resultLevel='완전 초보',generation=0,step=0;
 const termCache=new Map();
 function status(text,error=false){$('status').textContent=text;$('status').className=`status ${error?'error':busy?'busy':''}`;}
 for(const condition of CONDITIONS){const label=el('label'),check=el('input');check.type='checkbox';check.value=condition;label.append(check,document.createTextNode(condition));$('priorities').append(label);}
 function allFiles(){return rows.flatMap(r=>r.images);}
 function release(row){for(const image of row.images)URL.revokeObjectURL(image.url);row.images=[];}
-function refresh(){rows.forEach((r,i)=>{r.title.textContent=`비교 대상 ${String(i+1).padStart(2,'0')}`;r.remove.disabled=rows.length<=2||busy;r.file.disabled=r.images.length>=2||busy;});$('add').disabled=rows.length>=4||busy;}
+function refresh(){rows.forEach((r,i)=>{r.title.textContent=`비교 대상 ${String(i+1).padStart(2,'0')}`;r.remove.disabled=rows.length<=2||busy;r.file.disabled=r.images.length>=2||busy;});$('add').disabled=rows.length>=4||busy;showStep();}
 function addItem(){
-  if(rows.length>=4)return;
+  if(busy||rows.length>=4)return;
   const row={images:[]},box=el('div',undefined,'item'),head=el('div',undefined,'item-head'),title=el('h3'),remove=el('button','대상 삭제');remove.type='button';head.append(title,remove);
   const nameLabel=el('label','대상 이름'),name=el('input');name.required=true;name.maxLength=80;name.placeholder='예: 중고 노트북 A';nameLabel.append(name);
   const textLabel=el('label','설명과 조건'),text=el('textarea');text.maxLength=4000;text.placeholder='가격, 사양, 이용 조건 등 원문을 붙여 넣어 주세요. (최대 4,000자)';textLabel.append(text);
@@ -24,7 +24,7 @@ function addItem(){
       row.images.push({file:chosen,url:URL.createObjectURL(chosen)});
     }error.textContent=errors.join(' ');displayImages();refresh();
   };
-  remove.onclick=()=>{if(busy||rows.length<=2)return;release(row);rows.splice(rows.indexOf(row),1);box.remove();refresh();};
+  remove.onclick=()=>{if(busy||rows.length<=2)return;release(row);rows.splice(rows.indexOf(row),1);box.remove();step=Math.min(step,rows.length);refresh();};
   Object.assign(row,{box,title,name,text,file,remove});rows.push(row);box.append(head,nameLabel,textLabel,fileLabel,list,error);$('items').append(box);refresh();
 }
 function fileData(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve({mimeType:file.type,data:String(reader.result).split(',')[1]});reader.onerror=()=>reject(new Error('이미지를 읽을 수 없습니다. 다시 선택해 주세요.'));reader.readAsDataURL(file);});}
@@ -45,7 +45,7 @@ async function request(path,payload){
   }catch(e){if(e.name==='AbortError')throw new Error('응답 시간이 초과되었습니다. 자동 재시도하지 않았습니다.');if(e instanceof TypeError)throw new Error('서버에 연결하지 못했습니다. 연결 상태를 확인해 주세요.');throw e;}finally{clearTimeout(timer);}
 }
 async function compare(change=''){
-  if(busy||!$('form').reportValidity())return;lock(true);status('자료를 확인하고 있습니다…');
+  if(busy||!validateAll())return;lock(true);status('자료를 확인하고 있습니다…');
   try{
     const input=await gatherInput(change),key=await signature(input);let data,cached=false;
     if(lastCache?.key===key){data=lastCache.data;cached=true;}else{status('AI가 자료를 읽고 비교하고 있습니다. 최대 60초 정도 걸릴 수 있습니다…');data=await request('/api/compare',input);lastCache={key,data};}
@@ -56,14 +56,39 @@ async function compare(change=''){
 }
 function openTerm(term){activeTerm=term;generation++;$('term-title').textContent=`${term.term}*`;$('term-content').replaceChildren();const dl=el('dl');for(const [name,key] of [['쉬운 뜻','easy_meaning'],['생활 속 비유','analogy'],['이 비교에서 중요한 이유','relevance'],['확인할 점','checks']])dl.append(el('dt',name),el('dd',term[key]));$('term-content').append(dl);$('term-question').value='';$('term-status').textContent='';$('term-answer').replaceChildren();if(!$('term-dialog').open)$('term-dialog').showModal();}
 function clearResult(){generation++;lastCache=null;lastInput=null;activeTerm=null;termCache.clear();$('result-content').replaceChildren();$('results').hidden=true;$('change').value='';$('term-content').replaceChildren();$('term-answer').replaceChildren();$('term-dialog').close();status('결과를 지웠습니다. 입력 자료는 유지됩니다.');}
-$('form').onsubmit=e=>{e.preventDefault();compare('');};$('recompare').onclick=()=>compare($('change').value);$('add').onclick=addItem;$('close-term').onclick=()=>{$('term-dialog').close();generation++;};$('term-dialog').addEventListener('cancel',()=>{generation++;});
+$('form').onsubmit=e=>{e.preventDefault();if(step<rows.length+1)nextStep();else compare('');};$('recompare').onclick=()=>compare($('change').value);$('add').onclick=()=>{addItem();step=rows.length;showStep(true);};$('close-term').onclick=()=>{$('term-dialog').close();generation++;};$('term-dialog').addEventListener('cancel',()=>{generation++;});
 $('term-form').onsubmit=async e=>{
   e.preventDefault();if(busy||!activeTerm)return;lock(true);const current=++generation;$('term-status').textContent='AI가 용어 질문을 확인하고 있습니다…';
   try{const payload={term:activeTerm,question:$('term-question').value,level:resultLevel,consent:$('consent').checked},key=await signature(payload);let data=termCache.get(key);if(!data){data=await request('/api/explain',payload);if(termCache.size>=5)termCache.clear();termCache.set(key,data);}if(current===generation){$('term-answer').replaceChildren(el('p',data.result.answer));for(const note of data.result.uncertainty_notes)$('term-answer').append(el('p',note,'hint'));$('term-status').textContent='답변을 확인해 주세요.';}}
   catch(error){if(current===generation)$('term-status').textContent=error.message;}finally{lock(false);}
 };
 $('clear-result').onclick=clearResult;
-$('clear-all').onclick=()=>{if(busy)return;clearResult();for(const row of rows)release(row);rows.length=0;$('items').replaceChildren();$('form').reset();$('access-password').value='';addItem();addItem();status('입력과 결과, 이용 암호를 모두 지웠습니다.');};
+$('clear-all').onclick=()=>{if(busy)return;clearResult();for(const row of rows)release(row);rows.length=0;$('items').replaceChildren();$('form').reset();step=0;$('access-password').value='';addItem();addItem();status('입력과 결과, 이용 암호를 모두 지웠습니다.');};
+
+// Theme changes and step navigation never send comparison data or call AI.
+$('theme').onchange=()=>{document.documentElement.dataset.theme=$('theme').value;};
+function checkStep(index){
+  const controls=index===0?[$('purpose'),$('budget'),$('custom')]:index<=rows.length?[rows[index-1].name,rows[index-1].text]:[$('consent')];
+  for(const control of controls)if(!control.checkValidity()){step=index;showStep();control.reportValidity();return false;}
+  if(index>0&&index<=rows.length){const row=rows[index-1];if(!row.text.value.trim()&&!row.images.length){step=index;showStep();status('설명과 조건을 입력하거나 사진·스크린샷을 추가해 주세요.',true);row.text.focus();return false;}}
+  return true;
+}
+function validateAll(){for(let i=0;i<=rows.length+1;i++)if(!checkStep(i))return false;return true;}
+function nextStep(){if(busy||!checkStep(step))return;status('');step=Math.min(step+1,rows.length+1);showStep(true);}
+function showStep(moveFocus=false){
+  step=Math.min(step,rows.length+1);
+  $('conditions-panel').hidden=step!==0;$('items-panel').hidden=!(step>0&&step<=rows.length);$('review-panel').hidden=step!==rows.length+1;
+  rows.forEach((r,i)=>r.box.hidden=step!==i+1);
+  $('previous').hidden=step===0;$('previous').disabled=busy;$('next').hidden=step===rows.length+1;$('next').disabled=busy;$('compare').hidden=step!==rows.length+1;
+  $('add').hidden=step!==rows.length;
+  const labels=['비교 조건',...rows.map((_,i)=>`대상 ${i+1}`),'확인'];
+  $('step-progress').textContent=`${step+1} / ${labels.length} 단계 · ${labels[step]}`;
+  $('wizard-steps').replaceChildren();labels.forEach((label,i)=>{const button=el('button',label);button.type='button';button.disabled=busy;if(i===step)button.setAttribute('aria-current','step');button.onclick=()=>{if(busy)return;for(let j=step;j<i;j++)if(!checkStep(j))return;step=i;status('');showStep(true);};$('wizard-steps').append(button);});
+  if(step===rows.length+1){const review=$('review-content');review.replaceChildren(el('p',`목적: ${$('purpose').value}`),el('p',`예산: ${$('budget').value?Number($('budget').value).toLocaleString('ko-KR')+'원':'지정하지 않음'}`),el('p',`중요 조건: ${[...$('priorities').querySelectorAll('input:checked')].map(x=>x.value).concat($('custom').value).filter(Boolean).join(', ')||'지정하지 않음'}`));for(const row of rows){const card=el('div',undefined,'review-item');card.append(el('strong',row.name.value),el('p',row.text.value||'이미지 자료'),el('p',`첨부 이미지 ${row.images.length}개`,'hint'));review.append(card);}}
+  if(moveFocus){const panel=step===0?$('conditions-panel'):step<=rows.length?rows[step-1].box:$('review-panel');const heading=panel.querySelector('h2,h3');heading.tabIndex=-1;heading.focus({preventScroll:true});$('wizard-steps').scrollIntoView({block:'start'});}
+}
+$('previous').onclick=()=>{if(busy)return;step=Math.max(0,step-1);status('');showStep(true);};$('next').onclick=nextStep;
+$('edit-inputs').onclick=()=>{step=0;showStep(true);};
 addItem();addItem();
 // Connection diagnostics are only shown on the owner's local development screen.
 if(['localhost','127.0.0.1','[::1]'].includes(location.hostname)){
