@@ -47,7 +47,10 @@ export function createApi({fetchImpl=(...args)=>fetch(...args),timeoutMs=60000,n
   async function callAI(body,env) {
     const controller=new AbortController(), timer=setTimeout(()=>controller.abort(),timeoutMs);
     try {
-      const response=await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify(body),signal:controller.signal,redirect:'error'});
+      const response=await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY.trim()},body:JSON.stringify(body),signal:controller.signal,redirect:'manual'});
+      // Do not forward the API key to any redirect target. Use manual mode for
+      // compatibility with the deployed Worker runtime as well as local Node.
+      if(response.status>=300 && response.status<400) throw new AppError('AI_REDIRECT','AI 접속 주소가 예상과 달라 요청을 중단했습니다. 운영자가 연결 주소를 확인해야 합니다.',502);
       if(!response.ok) {
         if(response.status===429) {guard.stop();throw new AppError('FREE_QUOTA','AI 무료 사용량 제한에 도달했습니다. 자동 재시도 없이 요청을 중단했습니다.',429,3600);}
         if(response.status===401 || response.status===403) throw new AppError('API_KEY_ERROR','서버의 API 키 또는 프로젝트 권한을 확인해야 합니다.',503);
