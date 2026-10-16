@@ -54,6 +54,10 @@ test('additional term question uses same API controls and has no images',async()
   const api=createApi({fetchImpl:async(url,options)=>{const body=JSON.parse(options.body);assert.equal(body.contents[0].parts.length,1);return upstream({answer:'일반 설명입니다.',uncertainty_notes:['제품 사양은 확인 필요']});}});
   const request=new Request('https://example.test/api/explain',{method:'POST',headers:req().headers,body:JSON.stringify({term,question:'RAM이 클수록 좋은가요?',level:'완전 초보',consent:true})});const response=await api(request,env);assert.equal(response.status,200);assert.equal((await response.json()).result.answer,'일반 설명입니다.');
 });
+test('Worker-compatible redirect mode never follows a redirect with the key',async()=>{
+  let calls=0;const api=createApi({fetchImpl:async(url,options)=>{calls++;assert.equal(options.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://unexpected.invalid/'}});}});
+  const response=await api(req(),env);assert.equal(response.status,502);assert.equal((await response.json()).error.code,'AI_REDIRECT');assert.equal(calls,1);
+});
 test('auth attempt gate is bounded without keeping IPs or credentials',async()=>{
   const api=createApi();for(let i=0;i<20;i++)assert.equal((await api(req(input(),{Authorization:'wrong'}),env)).status,401);assert.equal((await api(req(),env)).status,429);
 });
