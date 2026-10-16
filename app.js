@@ -65,4 +65,9 @@ $('term-form').onsubmit=async e=>{
 $('clear-result').onclick=clearResult;
 $('clear-all').onclick=()=>{if(busy)return;clearResult();for(const row of rows)release(row);rows.length=0;$('items').replaceChildren();$('form').reset();$('access-password').value='';addItem();addItem();status('입력과 결과, 이용 암호를 모두 지웠습니다.');};
 addItem();addItem();
+// Connection diagnostics are only shown on the owner's local development screen.
+if(['localhost','127.0.0.1','[::1]'].includes(location.hostname)){
+$('owner-connection').hidden=false;
 fetch('/api/status',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>{$('connection').textContent=data.ready?'AI 연결 설정이 준비되어 있습니다':'AI 연결 전 · API 계정 설정 대기';$('connection-detail').textContent=data.ready?'실제 호출 성공 여부는 분석 요청 시 확인됩니다. 무료 한도 초과 시 중단하며 자동 재시도하지 않습니다.':'입력 기능을 사용할 수 있습니다. API 키와 무료 계정 설정 전에는 AI 분석을 실행하지 않습니다.';}).catch(()=>{$('connection').textContent='API 서버에 연결하지 못했습니다';$('connection-detail').textContent='로컬 실행 안내에 따라 dev-server.mjs를 실행해 주세요. 파일 더블클릭이나 정적 서버만으로 AI를 사용할 수 없습니다.';});
+
+}

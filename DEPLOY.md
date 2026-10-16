@@ -9,7 +9,7 @@ GitHub 저장소는 소스 보관 장소입니다. GitHub Pages는 서버를 실
 3. Build command는 `npm run build`, Deploy command는 `npx wrangler deploy`, 프로젝트 루트는 저장소 최상위로 설정합니다. 빌드는 외부 서버에서 실행되며 이 PC에 프로그램을 설치하지 않습니다.
 4. 첫 배포는 비밀 설정이 없으므로 AI 요청을 거절합니다. 발급된 workers.dev 주소를 확인합니다.
 5. Worker의 Settings → Variables and Secrets에서 `GEMINI_API_KEY`, `ACCESS_PASSWORD`를 **Secret**으로 등록합니다. ACCESS_PASSWORD는 영문·숫자 16자 이상으로 정하세요. 키·암호를 코드, GitHub 파일 또는 빌드 로그에 넣지 마세요.
-6. Gemini 프로젝트가 결제 미연결 Free Tier이고 Worker도 Free임을 확인한 뒤 `FREE_TIER_CONFIRMED` 환경변수를 `true`로 설정합니다. 재배포 때 wrangler.jsonc의 false 설정이 다시 적용될 수 있으므로 배포 후 확인합니다. 이 값은 사용자의 확인 표시이며 계정 과금을 자동 검증하지 않습니다.
+6. Gemini 프로젝트가 결제 미연결 Free Tier이고 Worker도 Free임을 확인한 뒤 `FREE_TIER_CONFIRMED` 환경변수를 `true`로 설정합니다. `keep_vars: true`로 대시보드에서 등록한 값이 코드 재배포 후에도 유지됩니다. 이 값이 없으면 분석은 차단됩니다. 이 값은 사용자의 확인 표시이며 계정 과금을 자동 검증하지 않습니다.
 7. 새 HTTPS 주소에서 텍스트 및 개인정보 없는 이미지로 실제 분석을 테스트합니다. 운영 주소를 확인하기 전에는 배포 완료로 간주하지 않습니다.
 
 공유할 때 링크 표시 이름은 **나 대신 비교해줘**로 씁니다. 실제 URL은 Cloudflare가 부여하는 영문 workers.dev 주소이며 커스텀 도메인 구매는 필요하지 않습니다.
