@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="내 목적과 조건에 맞춰 자료를 비교하고 어려운 용어를 쉽게 이해하세요."><title>나 대신 비교해줘</title><link rel="stylesheet" href="/style.css"></head>
+<body><main>
+<header><div class="brand">비교의 기준은, 나에게.</div><span class="badge">AI 비교·선택 도우미</span><h1>나 대신 비교해줘<span class="accent">.</span></h1><p class="intro">복잡한 설명은 쉽게.<br>내게 중요한 차이는 분명하게.</p><p class="hint">상품 · 컴퓨터 · 강의 · 구독 서비스, 어떤 선택이든 자료부터 함께 살펴봐요.</p></header>
+<aside class="connection"><span class="dot" aria-hidden="true"></span><div><strong id="connection">서버 연결 확인 중…</strong><p id="connection-detail">실제 AI API만 사용합니다. 자료를 입력하는 동안에는 전송하지 않습니다.</p></div></aside>
+<details class="access"><summary>사이트 이용 암호 입력</summary><label>이용 암호 <input id="access-password" type="password" maxlength="200" autocomplete="off" placeholder="운영자가 정한 이용 암호"></label><p class="hint">Gemini API 키를 입력하는 칸이 아닙니다. 암호는 현재 탭에서만 사용하며 별도로 저장하지 않습니다.</p></details>
+<form id="form">
+<section><div class="section-title"><span class="step">01</span><h2>무엇을 위해 고르나요?</h2></div>
+<label>비교 목적 <span class="required">필수</span><textarea id="purpose" required maxlength="1000" placeholder="예: 코딩과 포트폴리오를 만들 중고 노트북을 고르고 싶어요."></textarea></label>
+<div class="grid"><label>예산 <span class="optional">원 · 선택</span><input id="budget" type="number" min="0" max="1000000000" step="1" inputmode="numeric" placeholder="예: 300000"></label><label>설명 난이도<select id="level"><option>완전 초보</option><option>기본 이해</option><option>자세히</option></select></label></div>
+<fieldset><legend>중요한 조건 <span class="optional">여러 개 선택 가능</span></legend><div id="priorities"></div></fieldset>
+<label>더 중요하게 보는 조건 <span class="optional">선택</span><input id="custom" maxlength="500" placeholder="예: 게임보다 RAM, SSD와 배터리 상태가 중요해요."></label></section>
+<section><div class="section-title"><span class="step">02</span><h2>비교할 자료를 넣어 주세요</h2></div><p class="hint">2~4개 대상 · 대상당 이미지 2개 · 이미지당 2MB<br>전체 이미지 최대 6개·6MB / JPG, PNG, WebP</p><div id="items"></div><button type="button" id="add">+ 비교 대상 추가</button></section>
+<section class="privacy"><h2>전송 전에 확인해 주세요</h2><p>이름·연락처·주민번호·계좌번호·비밀번호 같은 개인정보와 민감한 자료를 넣지 마세요. 사진 속 개인정보도 가린 뒤 올려 주세요.</p><label class="checkline"><input type="checkbox" id="consent" required><span>비교 버튼을 누르면 입력 텍스트와 이미지가 Google Gemini로 전송되며, 무료 서비스 자료가 제공자의 제품 개선에 사용될 수 있음을 이해했습니다.</span></label><p class="hint">이 앱은 자료를 DB·브라우저 저장소에 저장하지 않습니다. 현재 탭을 닫거나 전체 초기화하면 입력과 결과가 사라집니다. 외부 제공자의 처리는 해당 정책을 따릅니다.</p></section>
+<p id="status" class="status" role="status" aria-live="polite"></p><div class="actions"><button class="primary" id="compare" type="submit">내 조건으로 AI 비교하기 <span aria-hidden="true">→</span></button><button type="button" id="clear-all" class="quiet">전체 초기화</button></div><p class="hint">입력 중에는 AI를 호출하지 않습니다. 자동 재시도·유료 모델 전환·웹 검색을 하지 않습니다.</p>
+</form>
+<section id="results" hidden aria-labelledby="result-title"><div class="section-title"><span class="step">03</span><h2 id="result-title" tabindex="-1">비교 결과</h2></div><p id="result-meta" class="hint"></p><div id="result-content"></div>
+<section class="recompare"><h3>조건을 바꿔 다시 살펴볼까요?</h3><p class="hint">위 목적·예산·우선순위·난이도를 바꿀 수 있습니다. 아래 변경 조건은 기존 조건보다 우선합니다. 버튼을 누를 때만 다시 AI를 호출합니다.</p><label>변경하거나 가정할 조건<textarea id="change" maxlength="500" placeholder="예: 예산을 5만 원 줄이고, 가격보다 RAM을 우선해 줘."></textarea></label><button type="button" id="recompare">변경 조건으로 다시 비교</button></section><button type="button" id="clear-result" class="quiet">결과만 지우기</button></section>
+<footer>추천은 제공된 자료와 선택 기준에 따른 참고 판단입니다.<br>구매 전 가격과 실제 상태, 계약 조건을 직접 확인해 주세요.</footer>
+</main>
+<dialog id="term-dialog" aria-labelledby="term-title"><div class="dialog-head"><h2 id="term-title"></h2><button type="button" id="close-term" aria-label="용어 설명 닫기">닫기 ×</button></div><p class="hint">일반적인 개념 설명입니다. 특정 제품의 확인된 사실과 구분해서 읽어 주세요.</p><div id="term-content"></div><form id="term-form"><label>이 용어에 대해 더 궁금한 점<input id="term-question" maxlength="500" required placeholder="예: 용량이 크면 항상 좋은가요?"></label><p class="hint">기존 용어 설명과 질문만 전송합니다. 이미지·전체 비교 자료는 다시 보내지 않습니다.</p><button type="submit" id="ask-term">AI에게 추가 질문</button></form><p id="term-status" role="status" aria-live="polite"></p><div id="term-answer"></div></dialog>
+<script type="module" src="/app.js"></script></body></html>

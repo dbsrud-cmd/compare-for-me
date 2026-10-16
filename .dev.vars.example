@@ -1,0 +1,7 @@
+# Windows: %LOCALAPPDATA%\CompareHelper\.dev.vars 에 직접 입력하세요.
+# OneDrive 프로젝트 안이나 채팅에 실제 키를 넣지 마세요.
+GEMINI_API_KEY=
+# API 키와 다른, 이 사이트 이용용 긴 암호 (16자 이상)
+ACCESS_PASSWORD=
+# 결제 미연결 Gemini Free Tier 및 Workers Free 확인 후에만 true
+FREE_TIER_CONFIRMED=false
